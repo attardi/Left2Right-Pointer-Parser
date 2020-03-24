@@ -1,4 +1,7 @@
 # Left2Right-Pointer-Parser
+
+Port to python3 and pytorch 1.4 by Giuseppe Attardi (attardi@di.unipi.it).
+
 This repository includes the code of the left-to-right parser with pointer networks described in NAACL paper [Left-to-Right Dependency Parsing with Pointer Networks](https://arxiv.org/abs/1903.08445). The implementation is based on the dependency parser by Ma et al. (2018) (https://github.com/XuezheMax/NeuroNLP2) and reuses part of its code, including data preparation and evaluating scripts.
 
 ### Requirements
