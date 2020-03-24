@@ -1,9 +1,9 @@
 __author__ = 'max'
 
-from .instance import DependencyInstance, NERInstance
-from .instance import Sentence
-from .conllx_data import ROOT, ROOT_POS, ROOT_CHAR, ROOT_TYPE, END, END_POS, END_CHAR, END_TYPE
-from . import utils
+from neuronlp2.io.instance import DependencyInstance, NERInstance
+from neuronlp2.io.instance import Sentence
+from neuronlp2.io.common import ROOT, ROOT_POS, ROOT_CHAR, ROOT_TYPE, END, END_POS, END_CHAR, END_TYPE
+from neuronlp2.io.common import DIGIT_RE, MAX_CHAR_LENGTH
 
 
 class CoNLLXReader(object):
@@ -27,9 +27,11 @@ class CoNLLXReader(object):
 
         lines = []
         while len(line.strip()) > 0:
-            line = line.strip()
-            line = line.decode('utf-8')
-            lines.append(line.split('\t'))
+            if not line.startswith('#'): # Attardi
+                line = line.strip()
+                tokens = line.split('\t')
+                if not '-' in tokens[0] and not '.' in tokens[0]: # conllu. Attardi
+                    lines.append(tokens)
             line = self.__source_file.readline()
 
         length = len(lines)
@@ -63,13 +65,13 @@ class CoNLLXReader(object):
             for char in tokens[1]:
                 chars.append(char)
                 char_ids.append(self.__char_alphabet.get_index(char))
-            if len(chars) > utils.MAX_CHAR_LENGTH:
-                chars = chars[:utils.MAX_CHAR_LENGTH]
-                char_ids = char_ids[:utils.MAX_CHAR_LENGTH]
+            if len(chars) > MAX_CHAR_LENGTH:
+                chars = chars[:MAX_CHAR_LENGTH]
+                char_ids = char_ids[:MAX_CHAR_LENGTH]
             char_seqs.append(chars)
             char_id_seqs.append(char_ids)
 
-            word = utils.DIGIT_RE.sub(b"0", tokens[1]) if normalize_digits else tokens[1]
+            word = DIGIT_RE.sub("0", tokens[1]) if normalize_digits else tokens[1]
             pos = tokens[4]
             head = int(tokens[6])
             type = tokens[7]
@@ -122,7 +124,6 @@ class CoNLL03Reader(object):
         lines = []
         while len(line.strip()) > 0:
             line = line.strip()
-            line = line.decode('utf-8')
             lines.append(line.split(' '))
             line = self.__source_file.readline()
 
@@ -142,18 +143,20 @@ class CoNLL03Reader(object):
         ner_ids = []
 
         for tokens in lines:
+            if '-' in tokens[0] or '.' in tokens[0]: # conllu clitics. Attardi
+                continue
             chars = []
             char_ids = []
             for char in tokens[1]:
                 chars.append(char)
                 char_ids.append(self.__char_alphabet.get_index(char))
-            if len(chars) > utils.MAX_CHAR_LENGTH:
-                chars = chars[:utils.MAX_CHAR_LENGTH]
-                char_ids = char_ids[:utils.MAX_CHAR_LENGTH]
+            if len(chars) > MAX_CHAR_LENGTH:
+                chars = chars[:MAX_CHAR_LENGTH]
+                char_ids = char_ids[:MAX_CHAR_LENGTH]
             char_seqs.append(chars)
             char_id_seqs.append(char_ids)
 
-            word = utils.DIGIT_RE.sub(b"0", tokens[1]) if normalize_digits else tokens[1]
+            word = DIGIT_RE.sub("0", tokens[1]) if normalize_digits else tokens[1]
             pos = tokens[2]
             chunk = tokens[3]
             ner = tokens[4]
@@ -170,5 +173,5 @@ class CoNLL03Reader(object):
             ner_tags.append(ner)
             ner_ids.append(self.__ner_alphabet.get_index(ner))
 
-        return NERInstance(Sentence(words, word_ids, char_seqs, char_id_seqs), postags, pos_ids, chunk_tags, chunk_ids,
-                           ner_tags, ner_ids)
+        return NERInstance(Sentence(words, word_ids, char_seqs, char_id_seqs),
+                           postags, pos_ids, chunk_tags, chunk_ids, ner_tags, ner_ids)

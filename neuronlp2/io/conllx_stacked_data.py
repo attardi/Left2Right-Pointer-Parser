@@ -50,8 +50,6 @@ def _obtain_child_index_for_depth(heads, reverse):
     return [[child for child, depth in child_with_depth[head]] for head in range(len(heads))]
 
 
-
-
 def _generate_stack_inputs(heads, types, prior_order):
     #child_ids = _obtain_child_index_for_left2right(heads)
 
@@ -61,45 +59,45 @@ def _generate_stack_inputs(heads, types, prior_order):
     children = [0 for _ in range(len(heads)-1)]
     siblings = []
     previous = []
-    next = []	
+    next = []
     stacked_types = []
     skip_connect = []
     prev = [0 for _ in range(len(heads))]
     sibs = [0 for _ in range(len(heads))]
     newheads = [-1 for _ in range(len(heads))]
-    newheads[0]=0	
+    newheads[0]=0
     #stack = [0]
     stack = [1]
     position = 1
 
     for child in range(len(heads)):
-	if child == 0: continue
-	stacked_heads.append(child)
-	if child == len(heads)-1:
-		next.append(0)
-	else:
-		next.append(child+1)
-	previous.append(child-1)
-	head=heads[child]
-	newheads[child]=head
-	siblings.append(sibs[head])
-	skip_connect.append(prev[head])
+        if child == 0: continue
+        stacked_heads.append(child)
+        if child == len(heads)-1:
+                next.append(0)
+        else:
+                next.append(child+1)
+        previous.append(child-1)
+        head=heads[child]
+        newheads[child]=head
+        siblings.append(sibs[head])
+        skip_connect.append(prev[head])
         prev[head] = position
-	children[child-1]=head
+        children[child-1]=head
         sibs[head] = child
         stacked_types.append(types[child])
-	position += 1
-	if debug: 
-			print 'stacked_heads', stacked_heads
-			print 'stacked_types', stacked_types
-			print 'siblings', siblings
-			print 'sibs', sibs
-			print 'children', children
-			print 'prev', prev
-			print 'heads', heads
-			print 'newheads', newheads
-			print 'next', next
-			print 'previous', previous
+        position += 1
+        if debug: 
+                        print('stacked_heads', stacked_heads)
+                        print('stacked_types', stacked_types)
+                        print('siblings', siblings)
+                        print('sibs', sibs)
+                        print('children', children)
+                        print('prev', prev)
+                        print('heads', heads)
+                        print('newheads', newheads)
+                        print('next', next)
+                        print('previous', previous)
 
     if debug:exit(0)
     return stacked_heads, children, siblings, stacked_types, skip_connect, previous, next
@@ -159,7 +157,7 @@ def read_stacked_data_to_variable(source_path, word_alphabet, char_alphabet, pos
         single = np.zeros([bucket_size, bucket_length], dtype=np.int64)
         lengths_e = np.empty(bucket_size, dtype=np.int64)
 
-	"""
+        """
         stack_hid_inputs = np.empty([bucket_size, 2 * bucket_length - 1], dtype=np.int64)
         chid_inputs = np.empty([bucket_size, 2 * bucket_length - 1], dtype=np.int64)
         ssid_inputs = np.empty([bucket_size, 2 * bucket_length - 1], dtype=np.int64)
@@ -167,14 +165,14 @@ def read_stacked_data_to_variable(source_path, word_alphabet, char_alphabet, pos
         skip_connect_inputs = np.empty([bucket_size, 2 * bucket_length - 1], dtype=np.int64)
 
         masks_d = np.zeros([bucket_size, 2 * bucket_length - 1], dtype=np.float32)
-	"""
-	stack_hid_inputs = np.empty([bucket_size, bucket_length - 1], dtype=np.int64)
+        """
+        stack_hid_inputs = np.empty([bucket_size, bucket_length - 1], dtype=np.int64)
         chid_inputs = np.empty([bucket_size, bucket_length - 1], dtype=np.int64)
         ssid_inputs = np.empty([bucket_size, bucket_length - 1], dtype=np.int64)
         stack_tid_inputs = np.empty([bucket_size, bucket_length - 1], dtype=np.int64)
         skip_connect_inputs = np.empty([bucket_size, bucket_length - 1], dtype=np.int64)
-	previous_inputs = np.empty([bucket_size, bucket_length - 1], dtype=np.int64)
-	next_inputs = np.empty([bucket_size, bucket_length - 1], dtype=np.int64)	
+        previous_inputs = np.empty([bucket_size, bucket_length - 1], dtype=np.int64)
+        next_inputs = np.empty([bucket_size, bucket_length - 1], dtype=np.int64)        
 
         masks_d = np.zeros([bucket_size, bucket_length - 1], dtype=np.float32)
         lengths_d = np.empty(bucket_size, dtype=np.int64)
@@ -206,7 +204,7 @@ def read_stacked_data_to_variable(source_path, word_alphabet, char_alphabet, pos
                     single[i, j] = 1
 
             #inst_size_decoder = 2 * inst_size - 1
-	    inst_size_decoder = inst_size - 1	
+            inst_size_decoder = inst_size - 1        
             lengths_d[i] = inst_size_decoder
             # stacked heads
             stack_hid_inputs[i, :inst_size_decoder] = stack_hids
@@ -223,10 +221,10 @@ def read_stacked_data_to_variable(source_path, word_alphabet, char_alphabet, pos
             # skip connects
             skip_connect_inputs[i, :inst_size_decoder] = skip_ids
             skip_connect_inputs[i, inst_size_decoder:] = PAD_ID_TAG
-	    # ADDED
+            # ADDED
             previous_inputs[i, :inst_size_decoder] = previous_ids
             previous_inputs[i, inst_size_decoder:] = PAD_ID_TAG
-	    next_inputs[i, :inst_size_decoder] = next_ids
+            next_inputs[i, :inst_size_decoder] = next_ids
             next_inputs[i, inst_size_decoder:] = PAD_ID_TAG
             # masks_d
             masks_d[i, :inst_size_decoder] = 1.0
@@ -245,8 +243,8 @@ def read_stacked_data_to_variable(source_path, word_alphabet, char_alphabet, pos
         siblings = Variable(torch.from_numpy(ssid_inputs), volatile=volatile)
         stacked_types = Variable(torch.from_numpy(stack_tid_inputs), volatile=volatile)
         skip_connect = torch.from_numpy(skip_connect_inputs)
-	previous = Variable(torch.from_numpy(previous_inputs), volatile=volatile)
-	next = Variable(torch.from_numpy(next_inputs), volatile=volatile)
+        previous = Variable(torch.from_numpy(previous_inputs), volatile=volatile)
+        next = Variable(torch.from_numpy(next_inputs), volatile=volatile)
 
         masks_d = Variable(torch.from_numpy(masks_d), volatile=volatile)
         lengths_d = torch.from_numpy(lengths_d)
@@ -267,8 +265,8 @@ def read_stacked_data_to_variable(source_path, word_alphabet, char_alphabet, pos
             skip_connect = skip_connect.cuda()
             masks_d = masks_d.cuda()
             lengths_d = lengths_d.cuda()
-	    previous = previous.cuda()
-	    next = next.cuda()
+            previous = previous.cuda()
+            next = next.cuda()
 
         data_variable.append(((words, chars, pos, heads, types, masks_e, single, lengths_e),
                               (stacked_heads, children, siblings, stacked_types, skip_connect, previous, next, masks_d, lengths_d)))

@@ -18,7 +18,7 @@ import json
 
 import numpy as np
 import torch
-from torch.nn.utils import clip_grad_norm
+from torch.nn.utils import clip_grad_norm_ as clip_grad_norm
 from torch.optim import Adam, SGD, Adamax
 from neuronlp2.io import get_logger, conllx_stacked_data
 from neuronlp2.models import NewStackPtrNet
@@ -80,7 +80,7 @@ def main():
     args = args_parser.parse_args()
 
     logger = get_logger("PtrParser")
-    print('TRAINING NEW STACK-POINTER LEFT2RIGHT PARSER')	
+    print('TRAINING NEW STACK-POINTER LEFT2RIGHT PARSER')
     print('CUDA?', torch.cuda.is_available())
 
     mode = args.mode
@@ -181,7 +181,7 @@ def main():
                 oov += 1
             table[index, :] = embedding
         print('word OOV: %d' % oov)
-	print(torch.__version__)
+        print(torch.__version__)
         return torch.from_numpy(table)
 
     def construct_char_embedding_table():
@@ -225,10 +225,10 @@ def main():
         network.word_embedd.freeze()
 
     if use_gpu:
-	print('CUDA IS AVAILABLE')
+        print('CUDA IS AVAILABLE')
         network.cuda()
     else:
-	print('CUDA IS NOT AVAILABLE', use_gpu)
+        print('CUDA IS NOT AVAILABLE', use_gpu)
 
     save_args()
 
@@ -268,7 +268,7 @@ def main():
     logger.info('skip connect: %s, beam: %d' % (skipConnect, beam))
     logger.info(opt_info)
 
-    num_batches = num_data / batch_size + 1
+    num_batches = int(num_data / batch_size) + 1
     dev_ucorrect = 0.0
     dev_lcorrect = 0.0
     dev_ucomlpete_match = 0.0
@@ -306,9 +306,9 @@ def main():
             epoch, mode, opt, lr, eps, decay_rate, schedule, patient, decay, max_decay, double_schedule_decay))
 
         train_err_cov = 0.
-	train_err_arc = 0.
-	train_err_type = 0.
-	train_total = 0.
+        train_err_arc = 0.
+        train_err_type = 0.
+        train_total = 0.
 
 
         start_time = time.time()
@@ -320,14 +320,11 @@ def main():
             stacked_heads, children, sibling, stacked_types, skip_connect, previous, next, masks_d, lengths_d = input_decoder
 
 
-		
-
-
 
             optim.zero_grad()
 
 
-	    loss_arc, \
+            loss_arc, \
             loss_type, \
             loss_cov, num = network.loss(word, char, pos, heads, stacked_heads, children, sibling, stacked_types, previous, next, label_smooth,
                                                             skip_connect=skip_connect, mask_e=masks_e, length_e=lengths_e, mask_d=masks_d, length_d=lengths_d)
@@ -338,14 +335,14 @@ def main():
             clip_grad_norm(network.parameters(), clip)
             optim.step()
 
-	    train_err_arc += loss_arc.data[0] * num
+            train_err_arc += loss_arc.item() * num
 
-	    train_err_type += loss_type.data[0] * num
+            train_err_type += loss_type.item() * num
 
-	    train_err_cov += loss_cov.data[0] * num
+            train_err_cov += loss_cov.item() * num
 
 
-	    train_total += num
+            train_total += num
 
             time_ave = (time.time() - start_time) / batch
             time_left = (num_batches - batch) * time_ave
@@ -355,11 +352,11 @@ def main():
         sys.stdout.write("\b" * num_back)
         sys.stdout.write(" " * num_back)
         sys.stdout.write("\b" * num_back)
-	err_arc = train_err_arc / train_total
+        err_arc = train_err_arc / train_total
 
-	err_type = train_err_type / train_total
+        err_type = train_err_type / train_total
 
-	err_cov = train_err_cov / train_total
+        err_cov = train_err_cov / train_total
 
         err = err_arc + err_type + cov * err_cov
         print('train: %d loss: %.4f, arc: %.4f, type: %.4f, coverage: %.4f, time: %.2fs' % (
@@ -372,12 +369,12 @@ def main():
         # evaluate performance on dev data
         network.eval()
         #pred_filename = 'tmp/%spred_dev%d' % (str(uid), epoch)
-	pred_filename = '%spred_dev%d' % (str(uid), epoch)
-	pred_filename = os.path.join(model_path, pred_filename)
+        pred_filename = '%spred_dev%d' % (str(uid), epoch)
+        pred_filename = os.path.join(model_path, pred_filename)
         pred_writer.start(pred_filename)
         #gold_filename = 'tmp/%sgold_dev%d' % (str(uid), epoch)
-	gold_filename = '%sgold_dev%d' % (str(uid), epoch)
-	gold_filename = os.path.join(model_path, gold_filename)
+        gold_filename = '%sgold_dev%d' % (str(uid), epoch)
+        gold_filename = os.path.join(model_path, gold_filename)
         gold_writer.start(gold_filename)
 
         dev_ucorr = 0.0
@@ -393,7 +390,7 @@ def main():
         dev_root_corr = 0.0
         dev_total_root = 0.0
         dev_total_inst = 0.0
-	start_time_dev = time.time()
+        start_time_dev = time.time()
         for batch in conllx_stacked_data.iterate_batch_stacked_variable(data_dev, batch_size):
             input_encoder, _ = batch
             word, char, pos, heads, types, masks, lengths = input_encoder
@@ -430,8 +427,8 @@ def main():
 
             dev_total_inst += num_inst
 
-	end_time_dev = time.time()
-	lasted_time_dev=end_time_dev-start_time_dev
+        end_time_dev = time.time()
+        lasted_time_dev=end_time_dev-start_time_dev
         pred_writer.close()
         gold_writer.close()
         print('W. Punct: ucorr: %d, lcorr: %d, total: %d, uas: %.2f%%, las: %.2f%%, ucm: %.2f%%, lcm: %.2f%%' % (
@@ -459,14 +456,14 @@ def main():
             # torch.save(network, model_name)
             torch.save(network.state_dict(), model_name)
 
-	    print('======EVALUATING PERFORMANCE ON TEST======')
+            print('======EVALUATING PERFORMANCE ON TEST======')
             #pred_filename = 'tmp/%spred_test%d' % (str(uid), epoch)
-	    pred_filename = '%spred_test%d' % (str(uid), epoch)
-	    pred_filename = os.path.join(model_path, pred_filename)
+            pred_filename = '%spred_test%d' % (str(uid), epoch)
+            pred_filename = os.path.join(model_path, pred_filename)
             pred_writer.start(pred_filename)
             #gold_filename = 'tmp/%sgold_test%d' % (str(uid), epoch)
-	    gold_filename = '%sgold_test%d' % (str(uid), epoch)
-	    gold_filename = os.path.join(model_path, gold_filename)
+            gold_filename = '%sgold_test%d' % (str(uid), epoch)
+            gold_filename = os.path.join(model_path, gold_filename)
             gold_writer.start(gold_filename)
 
             test_ucorrect = 0.0
@@ -485,7 +482,7 @@ def main():
             test_root_correct = 0.0
             test_total_root = 0
 
-	    start_time_test = time.time()
+            start_time_test = time.time()
             for batch in conllx_stacked_data.iterate_batch_stacked_variable(data_test, batch_size):
                 input_encoder, _ = batch
                 word, char, pos, heads, types, masks, lengths = input_encoder
@@ -497,7 +494,7 @@ def main():
                 heads = heads.data.cpu().numpy()
                 types = types.data.cpu().numpy()
 
-		
+                
 
                 pred_writer.write(word, pos, heads_pred, types_pred, lengths, symbolic_root=True)
                 gold_writer.write(word, pos, heads, types, lengths, symbolic_root=True)
@@ -524,8 +521,8 @@ def main():
 
                 test_total_inst += num_inst
 
-	    end_time_test = time.time()
-	    lasted_time_test=end_time_test-start_time_test
+            end_time_test = time.time()
+            lasted_time_test=end_time_test-start_time_test
             pred_writer.close()
             gold_writer.close()
         else:
@@ -541,10 +538,10 @@ def main():
             else:
                 patient += 1
 
-	
+        
         print('----------------------------------------------------------------------------------------------------------------------------')
-	print('TIME DEV: ', lasted_time_dev, 'NUM SENTS DEV: ', dev_total_root, 'SPEED DEV: ', dev_total_root/lasted_time_dev)
-	print('best dev  W. Punct: ucorr: %d, lcorr: %d, total: %d, uas: %.2f%%, las: %.2f%%, ucm: %.2f%%, lcm: %.2f%% (epoch: %d)' % (
+        print('TIME DEV: ', lasted_time_dev, 'NUM SENTS DEV: ', dev_total_root, 'SPEED DEV: ', dev_total_root/lasted_time_dev)
+        print('best dev  W. Punct: ucorr: %d, lcorr: %d, total: %d, uas: %.2f%%, las: %.2f%%, ucm: %.2f%%, lcm: %.2f%% (epoch: %d)' % (
             dev_ucorrect, dev_lcorrect, dev_total, dev_ucorrect * 100 / dev_total, dev_lcorrect * 100 / dev_total,
             dev_ucomlpete_match * 100 / dev_total_inst, dev_lcomplete_match * 100 / dev_total_inst,
             best_epoch))
@@ -555,7 +552,7 @@ def main():
             best_epoch))
         print('best dev  Root: corr: %d, total: %d, acc: %.2f%% (epoch: %d)' % (dev_root_correct, dev_total_root, dev_root_correct * 100 / dev_total_root, best_epoch))
         print('----------------------------------------------------------------------------------------------------------------------------')
-	print('TIME TEST: ', lasted_time_test, 'NUM SENTS TEST: ', test_total_root, 'SPEED TEST: ', test_total_root/lasted_time_test)
+        print('TIME TEST: ', lasted_time_test, 'NUM SENTS TEST: ', test_total_root, 'SPEED TEST: ', test_total_root/lasted_time_test)
         print('best test W. Punct: ucorr: %d, lcorr: %d, total: %d, uas: %.2f%%, las: %.2f%%, ucm: %.2f%%, lcm: %.2f%% (epoch: %d)' % (
             test_ucorrect, test_lcorrect, test_total, test_ucorrect * 100 / test_total, test_lcorrect * 100 / test_total,
             test_ucomlpete_match * 100 / test_total_inst, test_lcomplete_match * 100 / test_total_inst,

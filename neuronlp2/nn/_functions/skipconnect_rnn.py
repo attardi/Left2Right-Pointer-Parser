@@ -1,8 +1,6 @@
 __author__ = 'max'
 
 import torch
-from torch.autograd import Variable
-from torch.nn._functions.thnn import rnnFusedPointwise as fusedBackend
 from torch.nn import functional as F
 
 
@@ -26,7 +24,7 @@ def SkipConnectRNNTanhCell(input, hidden, hidden_skip, w_ih, w_hh, b_ih=None, b_
     if noise_hidden is not None:
         hidden = hidden * noise_hidden
 
-    hy = F.tanh(F.linear(input, w_ih, b_ih) + F.linear(hidden, w_hh, b_hh))
+    hy = torch.tanh(F.linear(input, w_ih, b_ih) + F.linear(hidden, w_hh, b_hh))
     return hy
 
 
@@ -41,13 +39,13 @@ def SkipConnectLSTMCell(input, hidden, hidden_skip, w_ih, w_hh, b_ih=None, b_hh=
 
     ingate, forgetgate, cellgate, outgate = gates
 
-    ingate = F.sigmoid(ingate)
-    forgetgate = F.sigmoid(forgetgate)
-    cellgate = F.tanh(cellgate)
-    outgate = F.sigmoid(outgate)
+    ingate = torch.sigmoid(ingate)
+    forgetgate = torch.sigmoid(forgetgate)
+    cellgate = torch.tanh(cellgate)
+    outgate = torch.sigmoid(outgate)
 
     cy = (forgetgate * cx) + (ingate * cellgate)
-    hy = outgate * F.tanh(cy)
+    hy = outgate * torch.tanh(cy)
 
     return hy, cy
 
@@ -61,23 +59,17 @@ def SkipConnectFastLSTMCell(input, hidden, hidden_skip, w_ih, w_hh, b_ih=None, b
     if noise_hidden is not None:
         hx = hx * noise_hidden
 
-    if input.is_cuda:
-        igates = F.linear(input, w_ih)
-        hgates = F.linear(hx, w_hh)
-        state = fusedBackend.LSTMFused.apply
-        return state(igates, hgates, cx) if b_ih is None else state(igates, hgates, cx, b_ih, b_hh)
-
     gates = F.linear(input, w_ih, b_ih) + F.linear(hx, w_hh, b_hh)
 
     ingate, forgetgate, cellgate, outgate = gates.chunk(4, 1)
 
-    ingate = F.sigmoid(ingate)
-    forgetgate = F.sigmoid(forgetgate)
-    cellgate = F.tanh(cellgate)
-    outgate = F.sigmoid(outgate)
+    ingate = torch.sigmoid(ingate)
+    forgetgate = torch.sigmoid(forgetgate)
+    cellgate = torch.tanh(cellgate)
+    outgate = torch.sigmoid(outgate)
 
     cy = (forgetgate * cx) + (ingate * cellgate)
-    hy = outgate * F.tanh(cy)
+    hy = outgate * torch.tanh(cy)
 
     return hy, cy
 
@@ -92,9 +84,9 @@ def SkipConnectGRUCell(input, hidden, hidden_skip, w_ih, w_hh, b_ih=None, b_hh=N
     i_r, i_i, i_n = gi
     h_r, h_i, h_n = gh
 
-    resetgate = F.sigmoid(i_r + h_r)
-    inputgate = F.sigmoid(i_i + h_i)
-    newgate = F.tanh(i_n + resetgate * h_n)
+    resetgate = torch.sigmoid(i_r + h_r)
+    inputgate = torch.sigmoid(i_i + h_i)
+    newgate = torch.tanh(i_n + resetgate * h_n)
     hy = newgate + inputgate * (hidden - newgate)
 
     return hy
@@ -108,20 +100,14 @@ def SkipConnectFastGRUCell(input, hidden, hidden_skip, w_ih, w_hh, b_ih=None, b_
     if noise_hidden is not None:
         hx = hx * noise_hidden
 
-    if input.is_cuda:
-        gi = F.linear(input, w_ih)
-        gh = F.linear(hx, w_hh)
-        state = fusedBackend.GRUFused.apply
-        return state(gi, gh, hidden) if b_ih is None else state(gi, gh, hidden, b_ih, b_hh)
-
     gi = F.linear(input, w_ih, b_ih)
     gh = F.linear(hx, w_hh, b_hh)
     i_r, i_i, i_n = gi.chunk(3, 1)
     h_r, h_i, h_n = gh.chunk(3, 1)
 
-    resetgate = F.sigmoid(i_r + h_r)
-    inputgate = F.sigmoid(i_i + h_i)
-    newgate = F.tanh(i_n + resetgate * h_n)
+    resetgate = torch.sigmoid(i_r + h_r)
+    inputgate = torch.sigmoid(i_i + h_i)
+    newgate = torch.tanh(i_n + resetgate * h_n)
     hy = newgate + inputgate * (hidden - newgate)
 
     return hy
@@ -132,7 +118,7 @@ def SkipConnectRecurrent(reverse=False):
         # hack to handle LSTM
         h0 = hidden[0] if isinstance(hidden, tuple) else hidden
         # [length + 1, batch, hidden_size]
-        output = Variable(input.data.new(input.size(0) + 1, *h0.size()).zero_()) + h0
+        output = input.new_zeros(input.size(0) + 1, *h0.size()) + h0
         steps = range(input.size(0) - 1, -1, -1) if reverse else range(input.size(0))
         # create batch index
         batch_index = torch.arange(0, h0.size(0)).type_as(skip_connect)
